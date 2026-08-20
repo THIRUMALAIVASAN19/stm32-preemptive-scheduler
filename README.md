@@ -1,93 +1,122 @@
-# STM32F407 Bare-Metal Preemptive Scheduler
+STM32F407 Bare-Metal Preemptive Scheduler
 
-A **preemptive task scheduler implemented from scratch at the ARM Cortex-M4 register level** using C and inline ARM assembly.
+A preemptive task scheduler built from scratch for the STM32F407 Cortex-M4, using bare-metal C, memory-mapped registers, and inline ARM assembly.
 
-This project does **not** use FreeRTOS, HAL-based scheduling, or any RTOS abstraction. The scheduler directly uses Cortex-M4 exception mechanisms, CPU registers, memory-mapped peripherals, task control blocks, software-managed stacks, and inline assembly for context switching.
+This project implements the fundamental mechanisms behind a preemptive RTOS without using FreeRTOS or another RTOS scheduler.
 
-> **STM32F407 → Bare-Metal Firmware → SysTick → Task Scheduler → PendSV → Context Switching → 4 Periodic Tasks**
-
----
-
-## 🚀 Project Objective
-
-The objective of this project is to understand and implement the fundamental mechanisms used inside a preemptive RTOS scheduler on an ARM Cortex-M4.
-
-The scheduler demonstrates:
-
-* Preemptive task scheduling
-* Priority-based task selection
-* Round-robin scheduling
-* Periodic tasks
-* Task Control Blocks (TCBs)
-* Independent task stacks
-* SysTick-based scheduling
-* PendSV-based context switching
-* Process Stack Pointer (PSP)
-* Main Stack Pointer (MSP)
-* Critical sections
-* Cortex-M4 fault handling
-* Register-level peripheral programming
-* Inline ARM assembly
-* Bare-metal debugging using OpenOCD and GDB
-* Runtime debugging through UART and PuTTY
-
----
-
-# ⭐ Key Features
-
-| Feature         | Implementation         |
-| --------------- | ---------------------- |
-| MCU             | STM32F407              |
-| CPU             | ARM Cortex-M4          |
-| Programming     | C + Inline Assembly    |
-| Firmware        | Bare-metal             |
-| RTOS            | None                   |
-| Scheduler       | Preemptive             |
-| Scheduling      | Priority + Round-Robin |
-| Timer           | SysTick                |
-| Context Switch  | PendSV                 |
-| Task Stack      | PSP                    |
-| Scheduler Stack | MSP                    |
-| Task State      | TCB                    |
-| Task Count      | 4 periodic tasks       |
-| Debug Interface | SWD / ST-LINK          |
-| Debug Server    | OpenOCD                |
-| Debugger        | ARM GDB                |
-| Serial Monitor  | PuTTY                  |
-| Build Toolchain | ARM GNU Toolchain      |
-
----
-
-# 🛠 Hardware Used
-
-* STM32F407-based development board
-* ARM Cortex-M4 MCU
-* ST-LINK debugger/programmer
-* USB cable
-* Optional USB-UART interface for serial logging
-* PC running ARM GNU Toolchain, OpenOCD, GDB and PuTTY
-
-### MCU
-
-```text
 STM32F407
-    │
-    ▼
-ARM Cortex-M4
-    │
-    ├── SysTick
-    ├── PendSV
-    ├── NVIC
-    ├── MSP
-    ├── PSP
-    └── Cortex-M exception mechanism
-```
+    ↓
+Bare-Metal Firmware
+    ↓
+SysTick
+    ↓
+Task Scheduler
+    ↓
+Priority Scheduling
+    ↓
+PendSV
+    ↓
+Context Switching
+    ↓
+PSP / TCB
+    ↓
+4 Periodic Tasks + Idle Task
 
 ---
 
-# 🧠 Architecture
+🎯 Project Objective
 
-```text
+The objective of this project is to understand and implement a preemptive scheduler directly on the ARM Cortex-M4 processor.
+
+Instead of relying on an existing RTOS, the scheduler is implemented using:
+
+- Cortex-M4 CPU registers
+- Memory-mapped peripheral registers
+- SysTick
+- PendSV
+- MSP and PSP
+- Task Control Blocks
+- Software-managed task stacks
+- Inline ARM assembly
+- Critical sections
+- Cortex-M fault handling
+- Priority-based scheduling
+- Round-robin scheduling
+- READY / RUNNING / BLOCKED task states
+- Idle task
+
+The project demonstrates what happens underneath a traditional RTOS task-switching API.
+
+---
+
+⭐ Features
+
+- Bare-metal STM32F407 firmware
+- No FreeRTOS
+- No RTOS scheduler
+- Register-level programming
+- Inline ARM assembly
+- Preemptive scheduling
+- SysTick scheduler tick
+- PendSV context switching
+- PSP-based task execution
+- MSP for exceptions and scheduler/ISR execution
+- Task Control Blocks (TCBs)
+- Independent task stacks
+- Priority scheduling
+- Round-robin scheduling
+- Four periodic application tasks
+- READY / RUNNING / BLOCKED states
+- Idle Task
+- Task block/unblock mechanism
+- Critical sections
+- Cortex-M4 fault handling
+- SWD debugging
+- ST-LINK
+- OpenOCD
+- ARM GDB
+- UART debugging
+- PuTTY runtime monitoring
+
+---
+
+🧩 Hardware
+
+MCU
+
+STM32F407 — ARM Cortex-M4
+
+The scheduler uses the Cortex-M4 exception and stack mechanisms directly.
+
+Required hardware
+
+- STM32F407 development board
+- ST-LINK debugger/programmer
+- USB cable
+- PC
+
+Optional
+
+- USB-UART interface for serial logging
+- PuTTY-compatible serial terminal
+
+---
+
+🛠 Software / Tools
+
+Tool| Purpose
+ARM GNU Toolchain| Compile and link firmware
+"arm-none-eabi-gcc"| C compiler
+"arm-none-eabi-gdb"| Debugger
+OpenOCD| Debug server / flashing
+ST-LINK| SWD interface
+PuTTY| UART runtime monitoring
+Make| Build automation
+
+---
+
+🏗️ System Architecture
+
                          STM32F407
                         Cortex-M4
                             │
@@ -98,13 +127,21 @@ ARM Cortex-M4
               │                           │
        Memory-Mapped I/O             CPU Registers
               │                           │
-          GPIO / UART               MSP / PSP / CONTROL
+        GPIO / UART               MSP / PSP / CONTROL
                                           │
                                           ▼
                                       SysTick
                                           │
                                           ▼
                                   Task Scheduler
+                                          │
+                             ┌────────────┴────────────┐
+                             │                         │
+                       Task State                Task Selection
+                             │                         │
+                     READY/BLOCKED            Priority/RR
+                             │                         │
+                             └────────────┬────────────┘
                                           │
                                           ▼
                                        PendSV
@@ -113,193 +150,266 @@ ARM Cortex-M4
                                 Context Switching
                                           │
                                           ▼
-                                     Next Task
-```
+                                      Next Task
 
 ---
 
-# 🔄 Scheduler Flow
+🔄 Scheduler Flow
 
-```text
-                 System Tick
-                      │
-                      ▼
-                   SysTick
-                      │
-                      ▼
-             Update task timing
-                      │
-                      ▼
-              Check ready tasks
-                      │
-                      ▼
-           Priority-based selection
-                      │
-                      ▼
-             Round-robin selection
-                      │
-                      ▼
-               Trigger PendSV
-                      │
-                      ▼
-             Context switching
-                      │
-                      ▼
-                Next task runs
-```
-
----
-
-# ⚙️ Cortex-M4 Stack Architecture
-
-The Cortex-M4 provides two stack pointers that are important to this scheduler.
-
-```text
-                         Cortex-M4
-                             │
-                ┌────────────┴────────────┐
-                │                         │
-               MSP                       PSP
-                │                         │
-                ▼                         ▼
-        Scheduler / ISR              Application Tasks
-                                          │
-                             ┌────────────┼────────────┐
-                             │            │            │
-                            Task 1       Task 2       Task 3       Task 4
-                             │            │            │            │
-                           Stack        Stack        Stack        Stack
-```
-
-### MSP — Main Stack Pointer
-
-The MSP is used for:
-
-* Startup
-* Exception handling
-* Interrupt handlers
-* Scheduler/ISR execution
-
-### PSP — Process Stack Pointer
-
-The PSP is used for:
-
-* Application tasks
-* Individual task stacks
-* Task context
-
-This allows the scheduler and application tasks to use separate stack contexts.
+                 SysTick
+                    │
+                    ▼
+             Scheduler Tick
+                    │
+                    ▼
+          Update task timing
+                    │
+                    ▼
+        Check BLOCKED tasks
+                    │
+                    ▼
+       Unblock expired tasks
+                    │
+                    ▼
+          Find READY tasks
+                    │
+                    ▼
+        Select highest priority
+                    │
+                    ▼
+       Round-robin if required
+                    │
+                    ▼
+             Request PendSV
+                    │
+                    ▼
+          Context Switching
+                    │
+                    ▼
+             Next Task
 
 ---
 
-# 🧩 Task Control Block
+🧵 Task Model
 
-Each task is represented by a Task Control Block.
+The scheduler manages multiple application tasks.
 
-Conceptually:
-
-```text
-                    TCB
+                 Scheduler
                      │
-        ┌────────────┼────────────┐
-        │            │            │
-       PSP        Priority       State
-        │
-        ├── Task stack
-        │
-        └── Saved context
-```
-
-The TCB allows the scheduler to maintain the execution state of every task.
-
-The exact fields correspond to the implementation in `scheduler.c`.
+       ┌─────────────┼─────────────┐-------------|
+       │             │             │             |
+      T1             T2            T3            T4
+       │             │             │             │
+    Stack 1       Stack 2       Stack 3       Stack 4
+       │             │             │             │
+       └─────────────┴─────────────┴─────────────┘
+                         │
+                         ▼
+                        TCB
 
 ---
 
-# 🔀 Context Switching
+📋 Task Table
 
-Context switching is performed through **PendSV** and inline ARM assembly.
+Task| Period| State| Stack| Description
+Task 1| 125 ms| READY/RUNNING/BLOCKED| Private| Periodic task
+Task 2| 250 ms| READY/RUNNING/BLOCKED| Private| Periodic task
+Task 3| 500 ms| READY/RUNNING/BLOCKED| Private| Periodic task
+Task 4| 1000 ms| READY/RUNNING/BLOCKED| Private| Periodic task
+Idle Task| Always| READY| Private| Runs when no application task is ready
 
-The scheduler saves the current task's CPU context, stores its PSP in the TCB, selects the next task, restores the next task's context, and returns to that task.
-
-```text
-Current Task
-     │
-     ▼
-MRS R0, PSP
-     │
-     ▼
-Save R4-R11
-     │
-     ▼
-Save PSP → Current TCB
-     │
-     ▼
-Select Next Task
-     │
-     ▼
-Load Next Task PSP
-     │
-     ▼
-Restore R4-R11
-     │
-     ▼
-MSR PSP, R0
-     │
-     ▼
-Exception Return
-     │
-     ▼
-Next Task Running
-```
-
-### Important Cortex-M registers
-
-```text
-R0-R12
-SP
-LR
-PC
-xPSR
-MSP
-PSP
-CONTROL
-```
-
-The hardware exception mechanism automatically handles part of the exception stack frame, while the scheduler explicitly saves/restores the software-managed registers.
+«Keep the exact priority values synchronized with the implementation in the source code.»
 
 ---
 
-# 📌 SysTick
+🔁 Task States
 
-SysTick provides the scheduler's periodic timing source.
+Every task has an explicit scheduling state.
 
-```text
+                  ┌──────────────┐
+                  │    READY     │
+                  └──────┬───────┘
+                         │
+                  Scheduler selects
+                         │
+                         ▼
+                  ┌──────────────┐
+                  │   RUNNING    │
+                  └──────┬───────┘
+                         │
+                ┌────────┴────────┐
+                │                 │
+            Preemption       Period complete
+                │                 │
+                ▼                 ▼
+             READY           ┌──────────────┐
+                             │   BLOCKED    │
+                             └──────┬───────┘
+                                    │
+                              Period expires
+                                    │
+                                    ▼
+                                  READY
+
+READY
+
+A READY task is eligible to run.
+
+It can be selected by the scheduler.
+
+RUNNING
+
+The RUNNING task currently owns the CPU.
+
+Because the STM32F407 is single-core, only one application task executes at a time.
+
+BLOCKED
+
+A BLOCKED task is temporarily removed from normal scheduling.
+
+For periodic tasks, the task can become BLOCKED while waiting for its next activation period.
+
+---
+
+🔓 Block / Unblock
+
+A periodic task can transition:
+
+RUNNING
+   │
+   ▼
+Period complete
+   │
+   ▼
+BLOCKED
+   │
+   │ SysTick updates timing
+   │
+   ▼
+Period expires
+   │
+   ▼
+READY
+
+The scheduler periodically checks BLOCKED tasks.
+
 SysTick
    │
    ▼
-Scheduler Tick
+Update timing
    │
-   ├── Update task timing
+   ▼
+Check BLOCKED tasks
    │
-   ├── Check delayed tasks
+   ├── Still waiting
    │
-   ├── Determine ready tasks
-   │
-   └── Request context switch
-```
+   └── Expired
+         │
+         ▼
+       READY
 
-SysTick does not perform the complete context switch itself.
-
-Instead, it prepares the scheduler state and allows **PendSV** to perform the context switch.
+Only READY tasks participate in normal task selection.
 
 ---
 
-# 🔄 PendSV
+💤 Idle Task
 
-PendSV is used as the scheduler's context-switch exception.
+The scheduler includes an Idle Task.
 
-```text
+Its purpose is to guarantee that there is always a valid task context when all application tasks are blocked.
+
+Task 1 ── BLOCKED
+Task 2 ── BLOCKED
+Task 3 ── BLOCKED
+Task 4 ── BLOCKED
+              │
+              ▼
+          Scheduler
+              │
+              ▼
+          Idle Task
+
+The Idle Task has the lowest scheduling priority.
+
+Highest Priority
+       │
+       ▼
+     Task 1
+     Task 2
+     Task 3
+     Task 4
+       │
+       ▼
+   Idle Task
+       │
+       ▼
+Lowest Priority
+
+The Idle Task may perform background processing or use "WFI" for low-power operation if implemented.
+
+---
+
+🎯 Priority + Round-Robin Scheduling
+
+The scheduler uses priority-based selection.
+
+READY Tasks
+     │
+     ▼
+Highest Priority
+     │
+     ▼
+Multiple tasks at same priority?
+     │
+   ┌─┴─┐
+  Yes  No
+   │    │
+   ▼    ▼
+Round  Select
+Robin   Task
+   │
+   ▼
+Next Task
+
+The scheduler first considers task priority.
+
+If multiple READY tasks have the same scheduling priority, round-robin selection can be used to share processor time between them.
+
+---
+
+⏱️ SysTick
+
+SysTick provides the periodic scheduler timing source.
+
+                SysTick
+                   │
+                   ▼
+             Scheduler Tick
+                   │
+          ┌────────┼─────────┐
+          │        │         │
+       Update    Check     Update
+       timing   blocked    state
+                   │
+                   ▼
+              Task Ready?
+                   │
+                   ▼
+              Scheduler
+                   │
+                   ▼
+                 PendSV
+
+SysTick is responsible for time-related scheduler operations.
+
+The actual context switch is delegated to PendSV.
+
+---
+
+⚡ PendSV
+
+PendSV is used for deferred context switching.
+
 SysTick
    │
    ▼
@@ -322,171 +432,231 @@ Restore next context
    │
    ▼
 Return to task
-```
 
-Using PendSV keeps the actual context-switch operation separate from the periodic timer interrupt.
+This separates scheduler timing from the actual register save/restore operation.
 
 ---
 
-# 🎯 Priority Round-Robin Scheduling
+🧠 MSP vs PSP
 
-The scheduler combines **priority-based selection** with round-robin behavior.
+The Cortex-M4 has two stack pointers:
+
+                     Cortex-M4
+                         │
+              ┌──────────┴──────────┐
+              │                     │
+             MSP                   PSP
+              │                     │
+              ▼                     ▼
+      Scheduler / ISR          Application Tasks
+                                      │               
+                         ┌────────────┼────────────┐____________
+                         │            │            │            |
+                        T1           T2           T3           T4
+                         │            │            │            │
+                       Stack        Stack        Stack        Stack
+
+MSP
+
+The Main Stack Pointer is used for:
+
+- Startup
+- Exceptions
+- Interrupt handlers
+- Scheduler/ISR execution
+
+PSP
+
+The Process Stack Pointer is used for:
+
+- Application tasks
+- Task stacks
+- Task context
+
+The scheduler stores and restores task PSP values through the TCB.
+
+---
+
+🧱 Task Control Block
+
+A Task Control Block stores the scheduler state of an individual task.
 
 Conceptually:
 
-```text
-             Ready Tasks
-                  │
-                  ▼
-          Find highest priority
-                  │
-                  ▼
-       Multiple tasks at same priority?
-             │           │
-            Yes          No
-             │           │
-             ▼           ▼
-        Round-robin    Select task
-             │
-             ▼
-        Select next task
-```
+TCB
+│
+├── PSP
+├── Priority
+├── State
+├── Period / Timing
+└── Task information
 
-This provides deterministic task selection while allowing tasks with equal scheduling priority to share CPU time.
+The PSP is especially important because it points to the saved task context.
 
----
-
-# ⏱️ Periodic Tasks
-
-The project demonstrates four periodic application tasks.
-
-| Task   |  Period | Purpose       |
-| ------ | ------: | ------------- |
-| Task 1 |  125 ms | Periodic task |
-| Task 2 |  250 ms | Periodic task |
-| Task 3 |  500 ms | Periodic task |
-| Task 4 | 1000 ms | Periodic task |
-
-> The exact priority/state values should be kept synchronized with the definitions in the source code.
-
-The different periods demonstrate that multiple independent tasks can be managed by the scheduler.
+Task A
+  │
+  ▼
+PSP
+  │
+  ▼
+Task Stack
+  │
+  ▼
+Saved Context
 
 ---
 
-# 🔒 Critical Sections
+🔀 Context Switching
 
-Scheduler data structures must not be modified concurrently by application code and interrupt handlers.
+The context switch is implemented using inline ARM assembly.
 
-Critical sections are used around sensitive scheduler operations.
+Current Task
+     │
+     ▼
+MRS R0, PSP
+     │
+     ▼
+Save R4-R11
+     │
+     ▼
+Save PSP → Current TCB
+     │
+     ▼
+Select Next Task
+     │
+     ▼
+Get Next Task PSP
+     │
+     ▼
+Restore R4-R11
+     │
+     ▼
+MSR PSP, R0
+     │
+     ▼
+Exception Return
+     │
+     ▼
+Next Task Running
 
-```text
+Key instructions
+
+Instruction| Purpose
+"MRS"| Read special register
+"MSR"| Write special register
+"STMDB"| Store multiple registers
+"LDMIA"| Load multiple registers
+"R4-R11"| Software-saved context
+"PSP"| Task stack pointer
+
+---
+
+🧮 Context Frame
+
+During exception handling, Cortex-M hardware automatically stacks part of the CPU context.
+
+The scheduler additionally manages the software-saved registers.
+
+Hardware-managed frame
+----------------------
+R0
+R1
+R2
+R3
+R12
+LR
+PC
+xPSR
+
+Software-managed frame
+----------------------
+R4
+R5
+R6
+R7
+R8
+R9
+R10
+R11
+
+This division is fundamental to understanding Cortex-M context switching.
+
+---
+
+💾 Memory / Stack Architecture
+
+                  STM32F407 RAM
+                       │
+          ┌────────────┴────────────┐
+          │                         │
+       Scheduler                 Tasks
+          │                         │
+        TCBs              ┌─────────┼─────────┐_________
+                          │         │         │         |
+                       Task 1    Task 2    Task 3    Task 4
+                          │         │         │         │
+                        Stack     Stack     Stack     Stack
+
+Each task has an independent stack.
+
+The TCB contains the information required to resume the task.
+
+---
+
+🔒 Critical Sections
+
+Scheduler data must be protected when being modified by code that can be interrupted.
+
 Enter Critical Section
-        │
-        ▼
+          │
+          ▼
 Modify Scheduler State
-        │
-        ▼
+          │
+          ▼
 Update TCB / Task State
-        │
-        ▼
+          │
+          ▼
 Exit Critical Section
-```
 
-The purpose is to prevent race conditions while scheduler state is being modified.
-
----
-
-# 🧮 Memory and Task Stacks
-
-Each task requires its own stack.
-
-```text
-RAM
-│
-├── Scheduler / Kernel data
-│
-├── TCBs
-│
-├── Task 1 Stack
-│
-├── Task 2 Stack
-│
-├── Task 3 Stack
-│
-└── Task 4 Stack
-```
-
-Each task's TCB stores the information required to resume that task.
-
-During a context switch:
-
-```text
-Task A PSP
-    │
-    ▼
-Save Context
-    │
-    ▼
-TCB A
-    │
-    ▼
-Scheduler
-    │
-    ▼
-TCB B
-    │
-    ▼
-Task B PSP
-    │
-    ▼
-Restore Context
-    │
-    ▼
-Task B
-```
+Critical sections prevent inconsistent scheduler state and race conditions during sensitive operations.
 
 ---
 
-# 💥 Cortex-M4 Fault Handling
+💥 Cortex-M4 Fault Handling
 
-The project includes Cortex-M fault handling for debugging abnormal processor states.
+The project includes Cortex-M fault handling for debugging unexpected processor exceptions.
 
-Important exceptions include:
+Relevant fault classes include:
 
-```text
 HardFault
 MemManage
 BusFault
 UsageFault
-```
 
-A fault can be investigated by examining:
+When debugging a fault, inspect:
 
-```text
 PC
 LR
 SP
 xPSR
 MSP
 PSP
-```
 
-The faulting PC is particularly useful for locating the instruction that caused the exception.
+The PC can be used to locate the instruction where the fault occurred.
 
 ---
 
-# 🐛 Bare-Metal Debugging
+🐛 Bare-Metal Debugging
 
-This project can be debugged without an RTOS debugger or abstraction layer.
+The complete debugging chain is:
 
-```text
                          STM32F407
                              │
               ┌──────────────┴──────────────┐
               │                             │
              SWD                           UART
               │                             │
-           ST-LINK                      USB-UART
+           ST-LINK                      USB-UART/VCP
               │                             │
               ▼                             ▼
            OpenOCD                        PuTTY
@@ -495,138 +665,110 @@ This project can be debugged without an RTOS debugger or abstraction layer.
              GDB
               │
               ▼
-       Register-level debug
-```
+       Register-Level Debug
 
 ---
 
-# 🔌 OpenOCD
+🔌 OpenOCD
 
 Connect the STM32F407 through ST-LINK.
 
 Example:
 
-```bash
 openocd \
     -f interface/stlink.cfg \
     -f target/stm32f4x.cfg
-```
 
-OpenOCD provides the GDB server used to communicate with the target MCU.
+OpenOCD provides the GDB server interface.
 
 ---
 
-# 🧰 GDB
+🧰 GDB
 
-Start the ARM debugger:
+Start:
 
-```bash
 arm-none-eabi-gdb build/stm32-preemptive-scheduler.elf
-```
 
-Connect to OpenOCD:
+Connect:
 
-```gdb
 target extended-remote localhost:3333
-```
 
-Reset and halt:
+Reset:
 
-```gdb
 monitor reset halt
-```
 
-Program the target:
+Program:
 
-```gdb
 load
-```
 
 Continue:
 
-```gdb
 continue
-```
 
 ---
 
-# 🔎 Register-Level Debugging
+🔎 Register Debugging
 
-Useful GDB information includes:
+Display registers:
 
-```gdb
 info registers
-```
 
 Important registers:
 
-```text
 R0-R12
 SP
 LR
 PC
 xPSR
-```
 
-The scheduler can also be investigated through:
+Scheduler-specific information:
 
-```text
 MSP
 PSP
 CONTROL
 TCB
-Task stack memory
-```
+Task stack
 
-Breakpoints can be placed directly inside the scheduler:
+Breakpoints:
 
-```gdb
 break SysTick_Handler
 break PendSV_Handler
 break HardFault_Handler
-```
 
 ---
 
-# 🧵 Inspecting PSP
+🧵 PSP Debugging
 
-The Process Stack Pointer is critical to task context switching.
+Inspect the Process Stack Pointer:
 
-```gdb
 p/x $psp
-```
 
-Stack memory can be inspected using:
+Inspect task stack memory:
 
-```gdb
 x/32wx $psp
-```
 
-This allows the saved task context to be examined directly.
+This allows direct inspection of the context saved on the task stack.
 
 ---
 
-# 🖥️ PuTTY Serial Debugging
+🖥️ PuTTY UART Debugging
 
-UART logging can be monitored using PuTTY.
+PuTTY can be used to observe scheduler execution at runtime.
 
 Recommended configuration:
 
-```text
-Connection : Serial
-Baud rate  : 115200
-Data bits  : 8
-Stop bits  : 1
-Parity     : None
-Flow       : None
-```
+Connection type : Serial
+Baud rate       : 115200
+Data bits       : 8
+Stop bits       : 1
+Parity          : None
+Flow control    : None
 
-Example runtime output:
+Example output:
 
-```text
-====================================
- STM32F407 PREEMPTIVE SCHEDULER
-====================================
+========================================
+STM32F407 PREEMPTIVE SCHEDULER
+========================================
 
 Scheduler started
 
@@ -638,111 +780,105 @@ Task 4 running
 Context Switch
 Current Task : 1
 Next Task    : 2
-```
 
-The actual UART messages depend on the firmware implementation.
+Context Switch
+Current Task : 2
+Next Task    : 3
+
+The actual output depends on the UART logging implemented in the firmware.
 
 ---
 
-# 🏗️ Build Instructions
+🔨 Build Instructions
 
-## 1. Install ARM GNU Toolchain
+Requirements
 
-Verify:
+Install:
 
-```bash
+- ARM GNU Toolchain
+- Make
+- OpenOCD
+
+Verify the compiler:
+
 arm-none-eabi-gcc --version
-```
 
 Verify GDB:
 
-```bash
 arm-none-eabi-gdb --version
-```
 
-## 2. Install OpenOCD
+Verify OpenOCD:
 
-Verify:
-
-```bash
 openocd --version
-```
 
-## 3. Build
+Build
 
 From the repository root:
 
-```bash
 make
-```
 
-The build should generate the ELF firmware and, depending on the Makefile configuration, binary/hex output.
+Typical generated files:
 
-Typical output:
-
-```text
 build/
 ├── *.o
 ├── *.elf
 ├── *.bin
 ├── *.hex
 └── *.map
-```
 
 ---
 
-# ⚡ Flash Instructions
+⚡ Flash Instructions
 
-Connect the STM32F407 board through ST-LINK.
+Connect the STM32F407 through ST-LINK.
 
-OpenOCD can be used to program the target.
+Start OpenOCD or use it directly for programming:
 
-Example:
-
-```bash
 openocd \
     -f interface/stlink.cfg \
     -f target/stm32f4x.cfg \
     -c "program build/stm32-preemptive-scheduler.elf verify reset exit"
-```
 
-> Use the actual output filename generated by the Makefile.
+Use the exact ELF filename generated by the Makefile.
 
 ---
 
-# 🐞 Debug Instructions
+🐞 Debug Instructions
 
-Start OpenOCD:
+Terminal 1 — OpenOCD
 
-```bash
 openocd \
     -f interface/stlink.cfg \
     -f target/stm32f4x.cfg
-```
 
-In another terminal:
+Terminal 2 — GDB
 
-```bash
 arm-none-eabi-gdb build/stm32-preemptive-scheduler.elf
-```
 
 Then:
 
-```gdb
 target extended-remote localhost:3333
 monitor reset halt
 load
 break PendSV_Handler
 continue
-```
 
-Now the context-switch mechanism can be inspected instruction by instruction.
+At the breakpoint, inspect:
+
+PSP
+MSP
+PC
+LR
+xPSR
+TCB
+R4-R11
+
+This makes it possible to observe the context switch directly at the processor-register level.
 
 ---
 
-# 📂 Project Structure
+📂 Project Structure
 
-```text
 stm32-preemptive-scheduler/
 │
 ├── README.md
@@ -752,11 +888,8 @@ stm32-preemptive-scheduler/
 │
 ├── src/
 │   ├── main.c
-│   ├── scheduler.c
-│   ├── scheduler.h
 │   ├── led.c
-│   ├── led.h
-│   └── fault.c
+│   └── led.h
 │
 ├── startup/
 │   └── stm32_startup.c
@@ -771,8 +904,8 @@ stm32-preemptive-scheduler/
 │
 ├── docs/
 │   ├── architecture.md
-│   ├── context-switching.md
 │   ├── scheduler-design.md
+│   ├── context-switching.md
 │   ├── memory-stack.md
 │   └── cortex-m-faults.md
 │
@@ -780,404 +913,312 @@ stm32-preemptive-scheduler/
     ├── architecture.png
     ├── context-switch.png
     └── scheduler-demo.gif
-```
+
+«Adjust this tree to match the actual source layout; don't create files merely for appearance.»
 
 ---
 
-# 🎥 Demo
+🎥 Demo
 
-### Scheduler Running
-
-Add a GIF or video showing the four tasks executing on the STM32F407.
-
-```text
-[ STM32F407 Scheduler Demo GIF ]
-```
+Add a GIF, photograph, or video showing the scheduler running on the STM32F407.
 
 Recommended demonstration:
 
-```text
-Task 1 → LED / UART
-Task 2 → LED / UART
-Task 3 → LED / UART
-Task 4 → LED / UART
-        ↓
-   Preemption
-        ↓
- Context Switching
-        ↓
-   Next Task
-```
+Task 1
+  ↓
+Task 2
+  ↓
+Task 3
+  ↓
+Task 4
+  ↓
+Preemption
+  ↓
+Context Switch
+  ↓
+Next Task
 
-### Debugging Demonstration
+A debugging demonstration should show:
 
-A second demonstration should show:
-
-```text
 OpenOCD
    ↓
 GDB
    ↓
-Breakpoint at PendSV_Handler
+PendSV breakpoint
    ↓
 Inspect PSP
    ↓
 Inspect TCB
    ↓
 Single-step context switch
-```
 
 ---
 
-# 📸 Architecture Documentation
+📊 Architecture Summary
 
-The project should include diagrams showing:
-
-### 1. Overall Scheduler
-
-```text
-STM32F407
-    ↓
-SysTick
-    ↓
-Scheduler
-    ↓
-PendSV
-    ↓
-Context Switch
-    ↓
-Task
-```
-
-### 2. Stack Architecture
-
-```text
-MSP → Scheduler / ISR
-
-PSP → Task 1 Stack
-PSP → Task 2 Stack
-PSP → Task 3 Stack
-PSP → Task 4 Stack
-```
-
-### 3. Context Switching
-
-```text
-MRS PSP
-   ↓
-Save R4-R11
-   ↓
-Save PSP
-   ↓
-Select Task
-   ↓
-Restore R4-R11
-   ↓
-MSR PSP
-   ↓
-Return
-```
+                 STM32F407
+                Cortex-M4
+                    │
+                    ▼
+          Register-Level Firmware
+                    │
+                    ▼
+                 SysTick
+                    │
+                    ▼
+             Task Scheduler
+                    │
+          ┌─────────┴─────────┐
+          │                   │
+        READY              BLOCKED
+          │                   │
+          ▼                   │
+    Priority Selection        │
+          │                   │
+          ▼                   │
+     Round-Robin              │
+          │                   │
+          └────────┬──────────┘
+                   ▼
+                PendSV
+                   │
+                   ▼
+          Context Switching
+                   │
+                   ▼
+              PSP / TCB
+                   │
+                   ▼
+          Next Application Task
+                   │
+                   ▼
+             Idle Task
 
 ---
 
-# 🧪 What This Project Demonstrates
+🧠 Register-Level Design
 
-This project demonstrates practical understanding of:
+This project intentionally works close to the processor hardware.
 
-### ARM Cortex-M4
+Application
+     │
+     ▼
+Custom Scheduler
+     │
+     ├── SysTick
+     │
+     ├── PendSV
+     │
+     ├── TCB
+     │
+     ├── PSP
+     │
+     └── Inline Assembly
+             │
+             ▼
+        Cortex-M4 CPU
 
-* CPU registers
-* Exception entry/return
-* MSP
-* PSP
-* CONTROL
-* SysTick
-* PendSV
-* NVIC
-* Stack frames
-
-### Embedded C
-
-* Bare-metal programming
-* Memory-mapped registers
-* Volatile access
-* Interrupt handlers
-* Static memory allocation
-* Task data structures
-
-### ARM Assembly
-
-* `MRS`
-* `MSR`
-* `STMDB`
-* `LDMIA`
-* Register preservation
-* Stack manipulation
-* Exception context handling
-
-### Scheduler Design
-
-* Preemption
-* Priority scheduling
-* Round-robin scheduling
-* Periodic tasks
-* TCB management
-* Task stacks
-* Critical sections
-
-### Debugging
-
-* SWD
-* ST-LINK
-* OpenOCD
-* ARM GDB
-* UART
-* PuTTY
-* Register inspection
-* Stack inspection
-* Fault debugging
+No scheduler abstraction hides the context-switch mechanism.
 
 ---
 
-# 🚫 No RTOS Abstraction
+🚫 No RTOS
 
-This project intentionally avoids:
+This project does not depend on:
 
-```text
 ❌ FreeRTOS
-❌ CMSIS-RTOS
-❌ HAL scheduler
+❌ CMSIS-RTOS scheduler
 ❌ RTOS middleware
-❌ Dynamic task creation
-❌ High-level context-switch APIs
-```
+❌ HAL-based task scheduler
+❌ High-level context-switch API
 
-Instead:
-
-```text
-                 Application
-                      │
-                      ▼
-              Custom Scheduler
-                      │
-             ┌────────┴────────┐
-             │                 │
-          SysTick            PendSV
-             │                 │
-             └────────┬────────┘
-                      ▼
-               Inline Assembly
-                      │
-                      ▼
-              Cortex-M4 Registers
-                      │
-                      ▼
-                 Hardware
-```
+The scheduling mechanism is implemented directly.
 
 ---
 
-# 📈 Scheduler Execution Model
+🧪 Learning Outcomes
 
-```text
-        Timer Tick
-            │
-            ▼
-         SysTick
-            │
-            ▼
-    Scheduler evaluates
-     ready task states
-            │
-            ▼
-   Highest-priority task
-       is selected
-            │
-            ▼
-    PendSV is requested
-            │
-            ▼
-    Save current context
-            │
-            ▼
-      Update current
-           TCB
-            │
-            ▼
-     Select next task
-            │
-            ▼
-    Restore next context
-            │
-            ▼
-       Update PSP
-            │
-            ▼
-      Return to task
-```
+This project provides practical experience with:
 
----
-
-# 🔬 Why PendSV?
-
-PendSV is designed for deferred context switching.
-
-Instead of performing a potentially lengthy context switch directly inside the SysTick handler:
-
-```text
-SysTick
-   │
-   └── Scheduler decision
-           │
-           ▼
-        PendSV
-           │
-           └── Context switch
-```
-
-This separates **timer/scheduling decisions** from the actual **CPU context switch**.
-
----
-
-# 🧱 Design Philosophy
-
-The project follows a simple philosophy:
-
-> **Understand the hardware first, then build the abstraction.**
-
-Instead of starting with an RTOS API, this project starts with:
-
-```text
 Cortex-M4
-    ↓
-Registers
-    ↓
-Exceptions
-    ↓
-Stacks
-    ↓
-Context
-    ↓
-Tasks
-    ↓
-Scheduler
-```
 
-This makes the relationship between hardware and RTOS functionality explicit.
+- Processor registers
+- Exception entry and return
+- SysTick
+- PendSV
+- NVIC
+- MSP
+- PSP
+- CONTROL
+- Stack frames
+
+Embedded C
+
+- Bare-metal firmware
+- Memory-mapped registers
+- Volatile hardware access
+- Interrupt handlers
+- Static memory
+- Scheduler data structures
+
+ARM Assembly
+
+- "MRS"
+- "MSR"
+- "STMDB"
+- "LDMIA"
+- Register preservation
+- Stack manipulation
+- Context save/restore
+
+Scheduler Design
+
+- Preemption
+- Priority scheduling
+- Round-robin scheduling
+- Periodic execution
+- Task blocking
+- Task unblocking
+- Idle task
+- TCB management
+- Independent task stacks
+- Critical sections
+
+Debugging
+
+- SWD
+- ST-LINK
+- OpenOCD
+- GDB
+- UART
+- PuTTY
+- Register inspection
+- Stack inspection
+- Fault analysis
 
 ---
 
-# 🚧 Current Limitations
+🚧 Current Limitations
 
 This is an educational bare-metal scheduler rather than a production RTOS.
 
 Possible limitations include:
 
-* Fixed number of tasks
-* Static task stacks
-* No dynamic memory allocator
-* Limited synchronization primitives
-* No mutex implementation
-* No semaphore implementation
-* No message queues
-* No sophisticated priority inheritance
-* Board-specific peripheral configuration
+- Fixed number of tasks
+- Static task stacks
+- Static scheduler configuration
+- No dynamic memory allocator
+- Limited synchronization primitives
+- No mutex implementation
+- No semaphore implementation
+- No message queues
+- No priority inheritance
+- Board-specific peripheral configuration
 
 ---
 
-# 🔮 Future Improvements
+🔮 Future Improvements
 
-Possible extensions:
+Possible future extensions:
 
-* Dynamic task creation
-* Task deletion
-* Sleep/delay API
-* Mutexes
-* Semaphores
-* Message queues
-* Priority inheritance
-* Idle task
-* Stack overflow detection
-* Runtime CPU utilization
-* Task statistics
-* System tickless operation
-* MPU-based task isolation
-* More advanced fault diagnostics
-* Automated scheduler tests
+- Dynamic task creation
+- Task deletion
+- General task delay API
+- Mutexes
+- Semaphores
+- Message queues
+- Priority inheritance
+- Stack overflow detection
+- Runtime stack usage measurement
+- CPU utilization measurement
+- Task statistics
+- Tickless scheduling
+- Low-power Idle Task
+- MPU-based task isolation
+- Improved fault diagnostics
+- Automated scheduler testing
 
 ---
 
-# 📚 Learning Outcomes
+📜 Project Philosophy
 
-After completing this project, the following concepts can be demonstrated:
+«Understand the hardware first, then build the abstraction.»
 
-```text
-ARM Cortex-M4
-      ↓
-Exception Mechanism
-      ↓
-SysTick
-      ↓
-PendSV
-      ↓
+The project follows this progression:
+
+Cortex-M4
+    ↓
+CPU Registers
+    ↓
+Memory-Mapped Hardware
+    ↓
+Exceptions
+    ↓
 MSP / PSP
-      ↓
+    ↓
 Task Stack
-      ↓
+    ↓
 TCB
-      ↓
-Context Save/Restore
-      ↓
+    ↓
+Context Switching
+    ↓
+Task States
+    ↓
+Scheduler
+    ↓
 Preemption
-      ↓
-Task Scheduler
-```
+
+The purpose is not simply to make four tasks run.
+
+The purpose is to understand how a preemptive scheduler actually takes control of a Cortex-M4 CPU.
 
 ---
 
-# 👨‍💻 Author
+👨‍💻 Author
 
-**THIRUMALAIVASAN K**
+THIRUMALAIVASAN K
 
-Embedded Systems / Firmware Project
-
----
-
-# 📜 License
-
-See [`LICENSE`](LICENSE) for details.
+STM32 / ARM Cortex-M4 / Bare-Metal Firmware Project
 
 ---
 
-## ⭐ Project Summary
+📄 License
 
-```text
-┌─────────────────────────────────────────────┐
-│            STM32F407 Cortex-M4              │
-├─────────────────────────────────────────────┤
-│                                             │
-│              Bare-Metal C                   │
-│                    +                        │
-│            Inline ARM Assembly              │
-│                                             │
-├─────────────────────────────────────────────┤
-│                   SysTick                   │
-│                      ↓                      │
-│                Task Scheduler               │
-│                      ↓                      │
-│                   PendSV                   │
-│                      ↓                      │
-│              Context Switching              │
-│                      ↓                      │
-│                PSP / TCB                   │
-│                      ↓                      │
-│              4 Periodic Tasks              │
-│                                             │
-├─────────────────────────────────────────────┤
-│        OpenOCD + GDB + ST-LINK              │
-│                 +                           │
-│              UART + PuTTY                   │
-└─────────────────────────────────────────────┘
-```
+See ""LICENSE"" (LICENSE) for license information.
 
-> **A register-level preemptive scheduler for STM32F407, built from the ground up to understand how an RTOS performs task scheduling and context switching on ARM Cortex-M4.**
+---
+
+⭐ Project at a Glance
+
+┌──────────────────────────────────────────────────┐
+│              STM32F407 Cortex-M4                 │
+├──────────────────────────────────────────────────┤
+│                                                  │
+│          Bare-Metal C + Inline Assembly          │
+│                                                  │
+├──────────────────────────────────────────────────┤
+│                     SysTick                      │
+│                        ↓                         │
+│                 Task Scheduler                  │
+│                        ↓                         │
+│             READY / RUNNING / BLOCKED            │
+│                        ↓                         │
+│             Priority + Round-Robin               │
+│                        ↓                         │
+│                    PendSV                        │
+│                        ↓                         │
+│                Context Switching                │
+│                        ↓                         │
+│                   PSP / TCB                     │
+│                        ↓                         │
+│           4 Periodic Tasks + Idle Task           │
+│                                                  │
+├──────────────────────────────────────────────────┤
+│              ST-LINK + OpenOCD + GDB             │
+│                        +                         │
+│                    UART + PuTTY                  │
+└──────────────────────────────────────────────────┘
+
+One-line description
+
+A register-level preemptive scheduler for STM32F407, implemented from scratch using bare-metal C and inline ARM assembly to demonstrate SysTick-driven scheduling, PendSV context switching, PSP/TCB management, task states, priority round-robin scheduling, and Cortex-M4 debugging. 
